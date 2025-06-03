@@ -332,6 +332,21 @@ def api_analytics():
     evaluations = read_evaluations()
     analytics = calculate_analytics(evaluations)
     return jsonify(analytics)
-
+def analytics_page():
+    # Burada analytics məlumatlarınızı yaradırsınız
+    analytics = {
+        "total_evaluations": 120,
+        "total_students": 30,
+        "total_groups": 5,
+        "average_scores": {
+            "ders_qosulma": 80,
+            "ev_tapsirigi": 75,
+            "ders_hazirliq": 70,
+            "overall": 75
+        },
+        "student_names": ["Elvin", "Leyla", "Murad"],
+        "student_averages": [85, 78, 69]
+    }
 if __name__ == '__main__':
     app.run(debug=True)
+    

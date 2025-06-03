@@ -65,7 +65,6 @@
             </div>
         </div>
 
-        <!-- Tələbə üzrə orta bal -->
         <div class="card mb-4">
             <div class="card-header">Tələbələr üzrə Ortalamalar</div>
             <div class="card-body">
@@ -77,58 +76,53 @@
 
     <!-- Chart.js Scripts -->
     <script>
-        // Ümumi ortalama qrafiki
-        const avgChart = document.getElementById('averageChart').getContext('2d');
-        new Chart(avgChart, {
+        // Flask tərəfindən ötürülən analytics obyektindən məlumatları JSON formatında alırıq
+        const averageScores = {{ analytics.average_scores | tojson }};
+        // analytics içində student_names və student_averages siyahıları olmalıdır (boş olsa da problem yaratmamalıdır)
+        const studentNames = {{ analytics.student_names | default ([]) | tojson }};
+        const studentAverages = {{ analytics.student_averages | default ([]) | tojson }};
+
+        // Ortalama balların qrafiki
+        const ctxAverage = document.getElementById('averageChart').getContext('2d');
+        new Chart(ctxAverage, {
             type: 'bar',
             data: {
                 labels: ['Qoşulma', 'Tapşırıq', 'Hazırlıq'],
                 datasets: [{
-                    label: 'Ortalama bal',
-                    data: [
-                        {{ analytics.average_scores.ders_qosulma }},
-                {{ analytics.average_scores.ev_tapsirigi }},
-                    {{ analytics.average_scores.ders_hazirliq }}
-                ],
-            backgroundColor: ['#0d6efd', '#198754', '#ffc107'],
-            borderRadius: 8
-            }]
-        },
+                    label: 'Ortalama Ballar',
+                    data: [averageScores.ders_qosulma, averageScores.ev_tapsirigi, averageScores.ders_hazirliq],
+                    backgroundColor: ['#007bff', '#28a745', '#ffc107'],
+                    borderColor: ['#0056b3', '#218838', '#d39e00'],
+                    borderWidth: 1
+                }]
+            },
             options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
+                scales: {
+                    y: { beginAtZero: true }
                 }
             }
-        }
-    });
+        });
 
-        // Tələbələr üzrə ortalama qrafiki
-        const studentChart = document.getElementById('studentChart').getContext('2d');
-        new Chart(studentChart, {
+        // Tələbələr üzrə orta bal qrafiki
+        const ctxStudent = document.getElementById('studentChart').getContext('2d');
+        new Chart(ctxStudent, {
             type: 'bar',
             data: {
-                labels: {{ analytics.student_names | tojson }},
-            datasets: [{
-                label: 'Ortalama Bal',
-                data: {{ analytics.student_averages | tojson }},
-            backgroundColor: '#6610f2',
-            borderRadius: 8
-            }]
-        },
+                labels: studentNames,
+                datasets: [{
+                    label: 'Ortalama Bal',
+                    data: studentAverages,
+                    backgroundColor: '#17a2b8',
+                    borderColor: '#117a8b',
+                    borderWidth: 1
+                }]
+            },
             options: {
-            responsive: true,
-            indexAxis: 'y',
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    max: 100
+                scales: {
+                    y: { beginAtZero: true }
                 }
             }
-        }
-    });
+        });
     </script>
 
     <!-- Bootstrap JS -->
