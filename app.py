@@ -1,462 +1,195 @@
-# app.py
-from flask import Flask, render_template, redirect, url_for, request, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, send_file, session
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from sqlalchemy import func
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+import pandas as pd
+import csv
+import io
+import pdfkit
+import datetime
+import matplotlib.pyplot as plt
 import os
-from utils.export import export_excel, export_pdf
-from utils.import_data import import_csv
-from utils.email_notify import notify_low_performance
-from utils.backup import backup_database
-from utils.qr import generate_qr
+import uuid
+import smtplib
+from email.message import EmailMessage
+import qrcode
 
 app = Flask(__name__)
-app.secret_key = 'secure_key_here'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+app.secret_key = 'your_secret_key'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.db'
 db = SQLAlchemy(app)
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
 
-from models import User, StudentPerformance
+# MODELS
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(50), nullable=False)
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+class Evaluation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_name = db.Column(db.String(100), nullable=False)
+    group = db.Column(db.String(50))
+    date = db.Column(db.Date, default=datetime.date.today)
+    ders_qosulma = db.Column(db.Integer)
+    ev_tapsirigi = db.Column(db.Integer)
+    ders_hazirliq = db.Column(db.Integer)
 
-@app.route('/')
-@login_required
-def index():
-    search = request.args.get('student_name', '')
-    group = request.args.get('group', '')
-    date_from = request.args.get('date_from', '')
-    date_to = request.args.get('date_to', '')
-    min_score = request.args.get('min_score', '')
+    @property
+    def average_score(self):
+        return round((self.ders_qosulma + self.ev_tapsirigi + self.ders_hazirliq) / 3, 2)
 
-    query = StudentPerformance.query
-
-    if search:
-        query = query.filter(StudentPerformance.name.contains(search))
-    if group:
-        query = query.filter(StudentPerformance.group == group)
-    if date_from:
-        query = query.filter(StudentPerformance.date >= datetime.strptime(date_from, '%Y-%m-%d'))
-    if date_to:
-        query = query.filter(StudentPerformance.date <= datetime.strptime(date_to, '%Y-%m-%d'))
-    if min_score:
-        query = query.filter(StudentPerformance.score >= float(min_score))
-
-    students = query.order_by(StudentPerformance.date.desc()).all()
-
-    return render_template('index.html', students=students)
-
+# LOGIN SYSTEM
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         user = User.query.filter_by(username=request.form['username']).first()
         if user and check_password_hash(user.password, request.form['password']):
-            login_user(user)
+            session['user_id'] = user.id
+            session['role'] = user.role
             return redirect(url_for('index'))
-        else:
-            flash("İstifadəçi adı və ya şifrə yanlışdır")
     return render_template('login.html')
 
 @app.route('/logout')
-@login_required
 def logout():
-    logout_user()
+    session.clear()
     return redirect(url_for('login'))
 
+# INDEX & CRUD
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    query = Evaluation.query
+    student_name = request.args.get('student_name')
+    group = request.args.get('group')
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    min_score = request.args.get('min_score')
+
+    if student_name:
+        query = query.filter(Evaluation.student_name.contains(student_name))
+    if group:
+        query = query.filter_by(group=group)
+    if date_from:
+        query = query.filter(Evaluation.date >= datetime.datetime.strptime(date_from, '%Y-%m-%d'))
+    if date_to:
+        query = query.filter(Evaluation.date <= datetime.datetime.strptime(date_to, '%Y-%m-%d'))
+    if min_score:
+        query = query.filter((Evaluation.ders_qosulma + Evaluation.ev_tapsirigi + Evaluation.ders_hazirliq)/3 >= float(min_score))
+
+    evaluations = query.all()
+    return render_template('index.html', evaluations=evaluations)
+
 @app.route('/add', methods=['POST'])
-@login_required
 def add():
-    name = request.form['name']
+    name = request.form['student_name']
     group = request.form['group']
-    date = datetime.strptime(request.form['date'], '%Y-%m-%d')
-    score = float(request.form['score'])
+    date = request.form['date']
+    ders_qosulma = int(request.form['ders_qosulma'])
+    ev_tapsirigi = int(request.form['ev_tapsirigi'])
+    ders_hazirliq = int(request.form['ders_hazirliq'])
 
-    # Dublikat yoxlaması
-    existing = StudentPerformance.query.filter_by(name=name, date=date).first()
+    existing = Evaluation.query.filter_by(student_name=name, date=date).first()
     if existing:
-        flash("Bu tələbə üçün həmin tarixdə qeyd mövcuddur")
-    else:
-        student = StudentPerformance(name=name, group=group, date=date, score=score)
-        db.session.add(student)
-        db.session.commit()
-    return redirect(url_for('index'))
+        return redirect(url_for('index'))
 
-@app.route('/delete/<int:id>')
-@login_required
-def delete(id):
-    student = StudentPerformance.query.get_or_404(id)
-    db.session.delete(student)
+    eval = Evaluation(student_name=name, group=group, date=date, ders_qosulma=ders_qosulma,
+                      ev_tapsirigi=ev_tapsirigi, ders_hazirliq=ders_hazirliq)
+    db.session.add(eval)
     db.session.commit()
     return redirect(url_for('index'))
 
+@app.route('/delete/<int:id>')
+def delete(id):
+    eval = Evaluation.query.get_or_404(id)
+    db.session.delete(eval)
+    db.session.commit()
+    return redirect(url_for('index'))
+
+# EXPORTS
 @app.route('/export/excel')
-@login_required
-def export_excel_route():
-    return export_excel()
-
-@app.route('/export/pdf')
-@login_required
-def export_pdf_route():
-    return export_pdf()
-
-@app.route('/import/csv', methods=['POST'])
-@login_required
-def import_csv_route():
-    file = request.files['file']
-    return import_csv(file)
-
-@app.route('/analytics')
-@login_required
-def analytics():
-    return render_template('analytics.html')  # Ətraflı analiz burada göstəriləcək
-
-# if __name__ == '__main__':
-#     app.run(debug=True)
-
-# app = Flask(__name__)
-# app.secret_key = 'your-secret-key-here'  # Flash mesajları üçün
-
-# --- Parametrlər və Qlobal Dəyişənlər ---
-DATA_FOLDER = 'data'
-CSV_FILE = os.path.join(DATA_FOLDER, 'evaluations.csv')
-CSV_HEADERS = ['Tarix', 'Qrup', 'Tələbə Adı', 'Dərsə Qoşulma', 'Ev Tapşırığı', 'Dərsə Hazırlıq']
-UPLOAD_FOLDER = os.path.join(DATA_FOLDER, 'uploads')
-
-# Qovluqları yarat
-for folder in [DATA_FOLDER, UPLOAD_FOLDER]:
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-
-# CSV faylını hazırla
-if not os.path.exists(CSV_FILE) or os.path.getsize(CSV_FILE) == 0:
-    with open(CSV_FILE, 'w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(CSV_HEADERS)
-
-def read_evaluations():
-    """CSV faylından məlumatları oxuyur"""
-    evaluations = []
-    if os.path.exists(CSV_FILE) and os.path.getsize(CSV_FILE) > 0:
-        try:
-            with open(CSV_FILE, 'r', newline='', encoding='utf-8') as file:
-                reader = csv.reader(file)
-                next(reader)  # Başlığı keç
-                for row in reader:
-                    if row and len(row) == len(CSV_HEADERS):
-                        evaluations.append(row)
-        except Exception as e:
-            app.logger.error(f"CSV oxuma xətası: {e}")
-    return evaluations
-
-def calculate_analytics(evaluations):
-    """Analitika hesablamalarını edir"""
-    if not evaluations:
-        return {}
-    
-    # DataFrame yaradırıq
-    df = pd.DataFrame(evaluations, columns=CSV_HEADERS)
-    
-    # Rəqəmsal sütunları çeviririk
-    numeric_cols = ['Dərsə Qoşulma', 'Ev Tapşırığı', 'Dərsə Hazırlıq']
-    for col in numeric_cols:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-    
-    # Ümumi ortalama
-    df['Ümumi Ortalama'] = df[numeric_cols].mean(axis=1).round(2)
-    
-    # Analitika hesablamaları
-    analytics = {
-        'total_evaluations': len(df),
-        'total_students': df['Tələbə Adı'].nunique(),
-        'total_groups': df['Qrup'].nunique(),
-        'average_scores': {
-            'ders_qosulma': df['Dərsə Qoşulma'].mean().round(2),
-            'ev_tapsirigi': df['Ev Tapşırığı'].mean().round(2),
-            'ders_hazirliq': df['Dərsə Hazırlıq'].mean().round(2),
-            'overall': df['Ümumi Ortalama'].mean().round(2)
-        },
-        'group_stats': {},
-        'student_stats': {},
-        'top_students': [],
-        'low_performers': []
-    }
-    
-    # Qrup statistikaları
-    for group in df['Qrup'].unique():
-        group_data = df[df['Qrup'] == group]
-        analytics['group_stats'][group] = {
-            'count': len(group_data),
-            'average': group_data['Ümumi Ortalama'].mean().round(2),
-            'students': group_data['Tələbə Adı'].nunique()
-        }
-    
-    # Tələbə statistikaları
-    student_groups = df.groupby('Tələbə Adı')
-    for student, data in student_groups:
-        avg_score = data['Ümumi Ortalama'].mean()
-        analytics['student_stats'][student] = {
-            'evaluations_count': len(data),
-            'average_score': round(avg_score, 2),
-            'last_evaluation': data['Tarix'].iloc[-1],
-            'group': data['Qrup'].iloc[-1]
-        }
-    
-    # Ən yaxşı və ən aşağı performans göstərən tələbələr
-    sorted_students = sorted(analytics['student_stats'].items(), 
-                           key=lambda x: x[1]['average_score'], reverse=True)
-    
-    analytics['top_students'] = sorted_students[:5]
-    analytics['low_performers'] = sorted_students[-5:] if len(sorted_students) >= 5 else []
-    
-    return analytics
-
-def filter_evaluations(evaluations, filters):
-    """Məlumatları filtrlər"""
-    if not evaluations or not filters:
-        return evaluations
-    
-    filtered = []
-    for row in evaluations:
-        include = True
-        
-        # Tələbə adı filtri
-        if filters.get('student_name'):
-            if filters['student_name'].lower() not in row[2].lower():
-                include = False
-        
-        # Qrup filtri
-        if filters.get('group'):
-            if filters['group'].lower() not in row[1].lower():
-                include = False
-        
-        # Tarix filtri
-        if filters.get('date_from') or filters.get('date_to'):
-            row_date = datetime.strptime(row[0], '%Y-%m-%d')
-            
-            if filters.get('date_from'):
-                from_date = datetime.strptime(filters['date_from'], '%Y-%m-%d')
-                if row_date < from_date:
-                    include = False
-            
-            if filters.get('date_to'):
-                to_date = datetime.strptime(filters['date_to'], '%Y-%m-%d')
-                if row_date > to_date:
-                    include = False
-        
-        # Minimum bal filtri
-        if filters.get('min_score'):
-            try:
-                scores = [float(row[3]), float(row[4]), float(row[5])]
-                avg_score = sum(scores) / len(scores)
-                if avg_score < float(filters['min_score']):
-                    include = False
-            except ValueError:
-                pass
-        
-        if include:
-            filtered.append(row)
-    
-    return filtered
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    today_date_str = datetime.now().strftime('%Y-%m-%d')
-    error_msg = None
-    form_data_on_error = {}
-
-    if request.method == 'POST':
-        # Form məlumatlarını al
-        tarix = request.form.get('tarix', today_date_str)
-        qrup = request.form.get('qrup', '').strip()
-        telebe_adi = request.form.get('telebe_adi', '').strip()
-        ders_qosulma = request.form.get('ders_qosulma')
-        ev_tapsirigi = request.form.get('ev_tapsirigi')
-        ders_hazirliq = request.form.get('ders_hazirliq')
-
-        if qrup and telebe_adi and ders_qosulma and ev_tapsirigi and ders_hazirliq:
-            new_data = [tarix, qrup, telebe_adi, ders_qosulma, ev_tapsirigi, ders_hazirliq]
-            
-            try:
-                with open(CSV_FILE, 'a', newline='', encoding='utf-8') as file:
-                    writer = csv.writer(file)
-                    writer.writerow(new_data)
-                flash('Qiymətləndirmə uğurla əlavə edildi!', 'success')
-                return redirect(url_for('index'))
-            except Exception as e:
-                error_msg = f"Məlumat əlavə edilərkən xəta: {e}"
-        else:
-            error_msg = "Bütün sahələri doldurun."
-            form_data_on_error = request.form
-
-    # Filtrlər
-    filters = {
-        'student_name': request.args.get('student_name', ''),
-        'group': request.args.get('group', ''),
-        'date_from': request.args.get('date_from', ''),
-        'date_to': request.args.get('date_to', ''),
-        'min_score': request.args.get('min_score', '')
-    }
-
-    # Məlumatları oxu və filtrlə
-    all_evaluations = read_evaluations()
-    filtered_evaluations = filter_evaluations(all_evaluations, filters)
-    
-    # Analitika hesabla
-    analytics = calculate_analytics(all_evaluations)
-
-    return render_template('index.html',
-                         evaluations=filtered_evaluations,
-                         headers=CSV_HEADERS,
-                         today_date=today_date_str,
-                         error_message=error_msg,
-                         form_data=form_data_on_error,
-                         analytics=analytics,
-                         filters=filters)
-
-@app.route('/analytics')
-def analytics_page():
-    """Ayrıca analitika səhifəsi"""
-    evaluations = read_evaluations()
-    analytics = calculate_analytics(evaluations)
-    return render_template('analytics.html', analytics=analytics)
+def export_excel():
+    evaluations = Evaluation.query.all()
+    df = pd.DataFrame([{c.name: getattr(e, c.name) for c in e.__table__.columns} for e in evaluations])
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False)
+    output.seek(0)
+    return send_file(output, download_name='evaluations.xlsx', as_attachment=True)
 
 @app.route('/export/csv')
 def export_csv():
-    """CSV export"""
-    try:
-        return send_file(CSV_FILE, 
-                        as_attachment=True, 
-                        download_name=f'evaluations_{datetime.now().strftime("%Y%m%d")}.csv')
-    except Exception as e:
-        flash(f'Export xətası: {e}', 'error')
-        return redirect(url_for('index'))
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Name', 'Group', 'Date', 'Ders Qosulma', 'Ev Tapsirigi', 'Ders Hazirliq'])
+    for e in Evaluation.query.all():
+        writer.writerow([e.id, e.student_name, e.group, e.date, e.ders_qosulma, e.ev_tapsirigi, e.ders_hazirliq])
+    output.seek(0)
+    return send_file(io.BytesIO(output.read().encode()), download_name="evaluations.csv", as_attachment=True)
 
-@app.route('/export/excel')
-def export_excel():
-    """Excel export"""
-    try:
-        evaluations = read_evaluations()
-        analytics = calculate_analytics(evaluations)
-        
-        # Excel faylı yarat
-        output = BytesIO()
-        workbook = xlsxwriter.Workbook(output)
-        
-        # Məlumatlar səhifəsi
-        worksheet_data = workbook.add_worksheet('Qiymətləndirmələr')
-        
-        # Başlıqları yaz
-        for col, header in enumerate(CSV_HEADERS):
-            worksheet_data.write(0, col, header)
-        
-        # Məlumatları yaz
-        for row, evaluation in enumerate(evaluations, 1):
-            for col, value in enumerate(evaluation):
-                worksheet_data.write(row, col, value)
-        
-        # Analitika səhifəsi
-        worksheet_analytics = workbook.add_worksheet('Analitika')
-        
-        row = 0
-        worksheet_analytics.write(row, 0, 'Ümumi Statistika')
-        row += 1
-        worksheet_analytics.write(row, 0, 'Ümumi qiymətləndirmələr:')
-        worksheet_analytics.write(row, 1, analytics.get('total_evaluations', 0))
-        row += 1
-        worksheet_analytics.write(row, 0, 'Ümumi tələbələr:')
-        worksheet_analytics.write(row, 1, analytics.get('total_students', 0))
-        row += 1
-        worksheet_analytics.write(row, 0, 'Ümumi qruplar:')
-        worksheet_analytics.write(row, 1, analytics.get('total_groups', 0))
-        
-        workbook.close()
-        output.seek(0)
-        
-        return send_file(output,
-                        as_attachment=True,
-                        download_name=f'evaluations_report_{datetime.now().strftime("%Y%m%d")}.xlsx',
-                        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    
-    except Exception as e:
-        flash(f'Excel export xətası: {e}', 'error')
-        return redirect(url_for('index'))
+@app.route('/export/pdf')
+def export_pdf():
+    evaluations = Evaluation.query.all()
+    rendered = render_template('pdf_template.html', evaluations=evaluations)
+    pdf = pdfkit.from_string(rendered, False)
+    return send_file(io.BytesIO(pdf), download_name='evaluations.pdf', as_attachment=True)
 
-@app.route('/import', methods=['POST'])
-def import_data():
-    """CSV faylından məlumat import et"""
-    if 'file' not in request.files:
-        flash('Fayl seçilməyib', 'error')
-        return redirect(url_for('index'))
-    
-    file = request.files['file']
-    if file.filename == '':
-        flash('Fayl seçilməyib', 'error')
-        return redirect(url_for('index'))
-    
-    if file and file.filename.lower().endswith('.csv'):
-        try:
-            # Faylı müvəqqəti olaraq saxla
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
-            file.save(filepath)
-            
-            # CSV-ni oxu və yoxla
-            imported_count = 0
-            with open(filepath, 'r', encoding='utf-8') as f:
-                reader = csv.reader(f)
-                header = next(reader)
-                
-                # Başlığı yoxla
-                if header != CSV_HEADERS:
-                    flash(f'CSV başlıqları uyğun deyil. Gözlənilən: {CSV_HEADERS}', 'error')
-                    os.remove(filepath)
-                    return redirect(url_for('index'))
-                
-                # Məlumatları əlavə et
-                with open(CSV_FILE, 'a', newline='', encoding='utf-8') as main_file:
-                    writer = csv.writer(main_file)
-                    for row in reader:
-                        if row and len(row) == len(CSV_HEADERS):
-                            writer.writerow(row)
-                            imported_count += 1
-            
-            os.remove(filepath)  # Müvəqqəti faylı sil
-            flash(f'{imported_count} qeyd uğurla import edildi!', 'success')
-            
-        except Exception as e:
-            flash(f'Import xətası: {e}', 'error')
-    else:
-        flash('Yalnız CSV faylları dəstəklənir', 'error')
-    
-    return redirect(url_for('index'))
-
-@app.route('/api/analytics')
-def api_analytics():
-    """Analitika məlumatlarını JSON formatında qaytarır"""
-    evaluations = read_evaluations()
-    analytics = calculate_analytics(evaluations)
-    return jsonify(analytics)
-def analytics_page():
-    # Burada analytics məlumatlarınızı yaradırsınız
-    analytics = {
-        "total_evaluations": 120,
-        "total_students": 30,
-        "total_groups": 5,
-        "average_scores": {
-            "ders_qosulma": 80,
-            "ev_tapsirigi": 75,
-            "ders_hazirliq": 70,
-            "overall": 75
-        },
-        "student_names": ["Elvin", "Leyla", "Murad"],
-        "student_averages": [85, 78, 69]
+# ANALYTICS & CHARTS
+@app.route('/analytics')
+def analytics():
+    evaluations = Evaluation.query.all()
+    student_names = list(set([e.student_name for e in evaluations]))
+    student_averages = [
+        round(sum(e.average_score for e in Evaluation.query.filter_by(student_name=name)) /
+              Evaluation.query.filter_by(student_name=name).count(), 2)
+        for name in student_names
+    ]
+    average_scores = {
+        "ders_qosulma": round(sum(e.ders_qosulma for e in evaluations) / len(evaluations), 2),
+        "ev_tapsirigi": round(sum(e.ev_tapsirigi for e in evaluations) / len(evaluations), 2),
+        "ders_hazirliq": round(sum(e.ders_hazirliq for e in evaluations) / len(evaluations), 2),
+        "overall": round(sum(e.average_score for e in evaluations) / len(evaluations), 2)
     }
+    return render_template('analytics.html', analytics={
+        "average_scores": average_scores,
+        "student_names": student_names,
+        "student_averages": student_averages
+    })
+
+# BACKUP
+@app.route('/backup')
+def backup():
+    backup_name = f"backup_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+    db.session.commit()
+    db.engine.execute(f"VACUUM INTO '{backup_name}'")
+    return send_file(backup_name, as_attachment=True)
+
+# EMAIL NOTIFY
+def notify_low_performance(student, score):
+    msg = EmailMessage()
+    msg['Subject'] = 'Aşağı Performans Bildirişi'
+    msg['From'] = 'admin@example.com'
+    msg['To'] = 'teacher@example.com'
+    msg.set_content(f"{student} tələbəsinin performansı aşağıdır: {score}")
+
+    with smtplib.SMTP('smtp.example.com', 587) as smtp:
+        smtp.starttls()
+        smtp.login('admin@example.com', 'password')
+        smtp.send_message(msg)
+
+# QR CODE
+@app.route('/qr/<int:id>')
+def generate_qr(id):
+    data = f"Tələbə ID: {id}"
+    img = qrcode.make(data)
+    buf = io.BytesIO()
+    img.save(buf)
+    buf.seek(0)
+    return send_file(buf, mimetype='image/png')
+
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
-    
