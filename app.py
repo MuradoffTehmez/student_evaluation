@@ -13,12 +13,25 @@ import uuid
 import smtplib
 from email.message import EmailMessage
 import qrcode
+from functools import wraps
+from flask import abort
+
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.db'
 db = SQLAlchemy(app)
 
+def role_required(role):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session or session.get('role') != role:
+                abort(403)
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+    
 # MODELS
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
