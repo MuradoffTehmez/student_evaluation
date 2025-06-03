@@ -141,11 +141,14 @@ def export_pdf():
 def analytics():
     evaluations = Evaluation.query.all()
     student_names = list(set([e.student_name for e in evaluations]))
-    student_averages = [
-        round(sum(e.average_score for e in Evaluation.query.filter_by(student_name=name)) /
-              Evaluation.query.filter_by(student_name=name).count(), 2)
-        for name in student_names
-    ]
+    student_averages = []
+
+    for name in student_names:
+        student_evals = Evaluation.query.filter_by(student_name=name).all()
+        if student_evals:
+            avg = round(sum(e.average_score for e in student_evals) / len(student_evals), 2)
+            student_averages.append(avg)
+
     average_scores = {
         "ders_qosulma": round(sum(e.ders_qosulma for e in evaluations) / len(evaluations), 2),
         "ev_tapsirigi": round(sum(e.ev_tapsirigi for e in evaluations) / len(evaluations), 2),
