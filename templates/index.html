@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="az">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tələbə Qiymətləndirmə Sistemi</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        h1,
+        h2 {
+            color: #333;
+        }
+
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="number"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        input[type="submit"] {
+            background-color: #5cb85c;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #4cae4c;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Tələbə Qiymətləndirmə Sistemi</h1>
+
+        <h2>Yeni Qiymətləndirmə Daxil Et</h2>
+        <form method="POST" action="/">
+            <label for="tarix">Tarix:</label>
+            <input type="date" id="tarix" name="tarix" value="{{ today_date }}" required>
+
+            <label for="qrup">Qrup:</label>
+            <input type="text" id="qrup" name="qrup" placeholder="Məsələn, 600a1" required>
+
+            <label for="telebe_adi">Tələbə Adı Soyadı:</label>
+            <input type="text" id="telebe_adi" name="telebe_adi" placeholder="Məsələn, Əli Vəliyev" required>
+
+            <p><strong>Qiymətləndirmə (Məsələn, 1-5 arası bir rəqəm daxil edin):</strong></p>
+
+            <label for="ders_qosulma">Dərsə Qoşulma:</label>
+            <input type="number" id="ders_qosulma" name="ders_qosulma" min="1" max="5" placeholder="1-5" required>
+            <label for="ev_tapsirigi">Ev Tapşırığı:</label>
+            <input type="number" id="ev_tapsirigi" name="ev_tapsirigi" min="1" max="5" placeholder="1-5" required>
+            <label for="ders_hazirliq">Dərsə Hazırlıq:</label>
+            <input type="number" id="ders_hazirliq" name="ders_hazirliq" min="1" max="5" placeholder="1-5" required>
+            <input type="submit" value="Əlavə Et">
+        </form>
+
+        <h2>Mövcud Qiymətləndirmələr</h2>
+        {% if evaluations %}
+        <table>
+            <thead>
+                <tr>
+                    {% for header in headers %}
+                    <th>{{ header }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in evaluations %}
+                <tr>
+                    {% for cell in row %}
+                    <td>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Hələlik heç bir qiymətləndirmə daxil edilməyib.</p>
+        {% endif %}
+    </div>
+</body>
+
+</html>
