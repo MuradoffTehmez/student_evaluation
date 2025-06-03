@@ -7,78 +7,119 @@
     <title>Tələbə Qiymətləndirmə Sistemi</title>
     <style>
         body {
-            font-family: sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
-            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: #212529;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
         }
 
         h1,
         h2 {
-            color: #333;
+            color: #343a40;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            text-align: center;
         }
 
         form {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            background-color: #fdfdfd;
         }
 
         label {
             display: block;
             margin-bottom: 8px;
-            font-weight: bold;
+            font-weight: 500;
+            color: #495057;
         }
 
         input[type="text"],
         input[type="date"],
-        input[type="number"] {
-            width: calc(100% - 22px);
+        input[type="number"],
+        select {
+            width: 100%;
             padding: 10px;
             margin-bottom: 15px;
-            border: 1px solid #ddd;
+            border: 1px solid #ced4da;
             border-radius: 4px;
             box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            border-color: #80bdff;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, .25);
         }
 
         input[type="submit"] {
-            background-color: #5cb85c;
+            background-color: #007bff;
             color: white;
-            padding: 10px 15px;
+            padding: 10px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 1rem;
+            transition: background-color 0.15s ease-in-out;
         }
 
         input[type="submit"]:hover {
-            background-color: #4cae4c;
+            background-color: #0056b3;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            background-color: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
         th,
         td {
-            border: 1px solid #ddd;
-            padding: 10px;
+            border: 1px solid #dee2e6;
+            padding: 12px;
             text-align: left;
         }
 
         th {
-            background-color: #f0f0f0;
+            background-color: #e9ecef;
+            color: #495057;
+            font-weight: 600;
         }
 
-        .container {
-            max-width: 900px;
-            margin: auto;
+        tbody tr:nth-child(odd) {
+            background-color: #f8f9fa;
+        }
+
+        tbody tr:hover {
+            background-color: #e2e6ea;
+        }
+
+        .error-message {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -87,25 +128,51 @@
     <div class="container">
         <h1>Tələbə Qiymətləndirmə Sistemi</h1>
 
+        {% if error_message %}
+        <div class="error-message">
+            <strong>Xəta:</strong> {{ error_message }}
+        </div>
+        {% endif %}
+
         <h2>Yeni Qiymətləndirmə Daxil Et</h2>
-        <form method="POST" action="/">
-            <label for="tarix">Tarix:</label>
-            <input type="date" id="tarix" name="tarix" value="{{ today_date }}" required>
+        <form method="POST" action="{{ url_for('index') }}">
+            <div>
+                <label for="tarix">Tarix:</label>
+                <input type="date" id="tarix" name="tarix" value="{{ form_data.get('tarix', today_date) }}" required>
+            </div>
 
-            <label for="qrup">Qrup:</label>
-            <input type="text" id="qrup" name="qrup" placeholder="Məsələn, 600a1" required>
+            <div>
+                <label for="qrup">Qrup:</label>
+                <input type="text" id="qrup" name="qrup" placeholder="Məsələn, 600a1"
+                    value="{{ form_data.get('qrup', '') }}" required>
+            </div>
 
-            <label for="telebe_adi">Tələbə Adı Soyadı:</label>
-            <input type="text" id="telebe_adi" name="telebe_adi" placeholder="Məsələn, Əli Vəliyev" required>
+            <div>
+                <label for="telebe_adi">Tələbə Adı Soyadı:</label>
+                <input type="text" id="telebe_adi" name="telebe_adi" placeholder="Məsələn, Əli Vəliyev"
+                    value="{{ form_data.get('telebe_adi', '') }}" required>
+            </div>
 
             <p><strong>Qiymətləndirmə (Məsələn, 1-5 arası bir rəqəm daxil edin):</strong></p>
 
-            <label for="ders_qosulma">Dərsə Qoşulma:</label>
-            <input type="number" id="ders_qosulma" name="ders_qosulma" min="1" max="5" placeholder="1-5" required>
-            <label for="ev_tapsirigi">Ev Tapşırığı:</label>
-            <input type="number" id="ev_tapsirigi" name="ev_tapsirigi" min="1" max="5" placeholder="1-5" required>
-            <label for="ders_hazirliq">Dərsə Hazırlıq:</label>
-            <input type="number" id="ders_hazirliq" name="ders_hazirliq" min="1" max="5" placeholder="1-5" required>
+            <div>
+                <label for="ders_qosulma">Dərsə Qoşulma:</label>
+                <input type="number" id="ders_qosulma" name="ders_qosulma" min="1" max="5" placeholder="1-5"
+                    value="{{ form_data.get('ders_qosulma', '') }}" required>
+            </div>
+
+            <div>
+                <label for="ev_tapsirigi">Ev Tapşırığı:</label>
+                <input type="number" id="ev_tapsirigi" name="ev_tapsirigi" min="1" max="5" placeholder="1-5"
+                    value="{{ form_data.get('ev_tapsirigi', '') }}" required>
+            </div>
+
+            <div>
+                <label for="ders_hazirliq">Dərsə Hazırlıq:</label>
+                <input type="number" id="ders_hazirliq" name="ders_hazirliq" min="1" max="5" placeholder="1-5"
+                    value="{{ form_data.get('ders_hazirliq', '') }}" required>
+            </div>
+
             <input type="submit" value="Əlavə Et">
         </form>
 
@@ -130,9 +197,26 @@
             </tbody>
         </table>
         {% else %}
+        {% if not error_message %} {# Əgər ümumi oxuma xətası yoxdursa və cədvəl boşdursa #}
         <p>Hələlik heç bir qiymətləndirmə daxil edilməyib.</p>
         {% endif %}
+        {% endif %}
     </div>
+
+    <script>
+        // Xəta baş verdikdə və form_data mövcud olduqda, form sahələrini əvvəlki dəyərlərlə doldurur.
+        // Bu, artıq HTML-də value atributları ilə təmin edildiyi üçün əlavə JavaScript-ə ehtiyac yoxdur.
+        // Əgər daha mürəkkəb bir doldurma lazım olarsa, burada JavaScript istifadə edilə bilər.
+        // Nümunə:
+        // document.addEventListener('DOMContentLoaded', function() {
+        //     {% if form_data and error_message %}
+        //         const formData = {{ form_data | tojson }};
+        //         if (formData.qrup) document.getElementById('qrup').value = formData.qrup;
+        //         if (formData.telebe_adi) document.getElementById('telebe_adi').value = formData.telebe_adi;
+        //         // ... digər sahələr ...
+        //     {% endif %}
+        // });
+    </script>
 </body>
 
 </html>
