@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="az">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Fayl Yükləmə Paneli</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+    <div class="container py-5">
+        <h2 class="text-center mb-4">📤 Qiymətləndirmə Məlumatlarını Yüklə</h2>
+
+        <!-- Əsas səhifəyə keçid -->
+        <div class="text-end mb-4">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">← Əsas səhifəyə qayıt</a>
+        </div>
+
+        <!-- Əlavə məlumat -->
+        <div class="alert alert-info">
+            <strong>Qeyd:</strong> Fayl formatı CSV və ya Excel (.xlsx) olmalıdır. Sətirlər tələbə adları və
+            qiymətləndirmə növləri (qoşulma, tapşırıq, hazırlıq) üzrə düzgün formatda olmalıdır.
+        </div>
+
+        <!-- Form -->
+        <form action="{{ url_for('import_data') }}" method="post" enctype="multipart/form-data"
+            class="border p-4 rounded bg-white shadow-sm">
+            <div class="mb-3">
+                <label for="file" class="form-label">Fayl seçin (.csv, .xlsx)</label>
+                <input type="file" class="form-control" id="file" name="file" accept=".csv, .xlsx" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Yüklə və Emal Et</button>
+        </form>
+
+        {% if message %}
+        <div class="alert alert-success mt-4">
+            {{ message }}
+        </div>
+        {% elif error %}
+        <div class="alert alert-danger mt-4">
+            {{ error }}
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
