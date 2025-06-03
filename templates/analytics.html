@@ -3,131 +3,26 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Analitika Paneli</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Statistik Analiz</title>
 </head>
 
-<body class="bg-light">
+<body>
+    <h2>Orta Bal Statistikası</h2>
+    <ul>
+        <li>Qatılım: {{ analytics.average_scores.ders_qosulma }}</li>
+        <li>Ev Tapşırığı: {{ analytics.average_scores.ev_tapsirigi }}</li>
+        <li>Hazırlıq: {{ analytics.average_scores.ders_hazirliq }}</li>
+        <li>Ümumi Ortalama: {{ analytics.average_scores.overall }}</li>
+    </ul>
 
-    <div class="container py-4">
+    <h3>Fərdi Orta Ballar:</h3>
+    <ul>
+        {% for name, avg in zip(analytics.student_names, analytics.student_averages) %}
+        <li>{{ name }} - {{ avg }}</li>
+        {% endfor %}
+    </ul>
 
-        <h2 class="mb-4 text-center">📈 Tələbə Qiymətləndirmə Analitikası</h2>
-
-        <div class="mb-3 text-end">
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">← Əsas səhifəyə qayıt</a>
-        </div>
-
-        <!-- Ümumi Statistik Kartlar -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card text-bg-primary mb-3 text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Qiymətləndirmələr</h5>
-                        <p class="card-text fs-4">{{ analytics.total_evaluations }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-bg-success mb-3 text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Tələbə sayı</h5>
-                        <p class="card-text fs-4">{{ analytics.total_students }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-bg-warning mb-3 text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Qrup sayı</h5>
-                        <p class="card-text fs-4">{{ analytics.total_groups }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card text-bg-dark mb-3 text-center">
-                    <div class="card-body">
-                        <h5 class="card-title">Ortalama bal</h5>
-                        <p class="card-text fs-4">{{ analytics.average_scores.overall }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Qrafiklər -->
-        <div class="card mb-4">
-            <div class="card-header">Ortalama Balların Qrafiki</div>
-            <div class="card-body">
-                <canvas id="averageChart" height="100"></canvas>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header">Tələbələr üzrə Ortalamalar</div>
-            <div class="card-body">
-                <canvas id="studentChart" height="100"></canvas>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Chart.js Scripts -->
-    <script>
-        // Flask tərəfindən ötürülən analytics obyektindən məlumatları JSON formatında alırıq
-        const averageScores = {{ analytics.average_scores | tojson }};
-        // analytics içində student_names və student_averages siyahıları olmalıdır (boş olsa da problem yaratmamalıdır)
-        const studentNames = {{ analytics.student_names | default ([]) | tojson }};
-        const studentAverages = {{ analytics.student_averages | default ([]) | tojson }};
-
-        // Ortalama balların qrafiki
-        const ctxAverage = document.getElementById('averageChart').getContext('2d');
-        new Chart(ctxAverage, {
-            type: 'bar',
-            data: {
-                labels: ['Qoşulma', 'Tapşırıq', 'Hazırlıq'],
-                datasets: [{
-                    label: 'Ortalama Ballar',
-                    data: [averageScores.ders_qosulma, averageScores.ev_tapsirigi, averageScores.ders_hazirliq],
-                    backgroundColor: ['#007bff', '#28a745', '#ffc107'],
-                    borderColor: ['#0056b3', '#218838', '#d39e00'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
-        });
-
-        // Tələbələr üzrə orta bal qrafiki
-        const ctxStudent = document.getElementById('studentChart').getContext('2d');
-        new Chart(ctxStudent, {
-            type: 'bar',
-            data: {
-                labels: studentNames,
-                datasets: [{
-                    label: 'Ortalama Bal',
-                    data: studentAverages,
-                    backgroundColor: '#17a2b8',
-                    borderColor: '#117a8b',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
-        });
-    </script>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+    <a href="{{ url_for('index') }}">Geri Qayıt</a>
 </body>
 
 </html>
