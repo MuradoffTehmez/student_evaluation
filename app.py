@@ -31,7 +31,26 @@ def role_required(role):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
-    
+
+
+from ics import Calendar, Event
+
+@app.route('/calendar/<int:id>')
+def download_calendar(id):
+    eval = Evaluation.query.get_or_404(id)
+    c = Calendar()
+    e = Event()
+    e.name = f"Performance Evaluation: {eval.student_name}"
+    e.begin = eval.date
+    e.description = f"Dərsə qoşulma: {eval.ders_qosulma}, Ev tapşırığı: {eval.ev_tapsirigi}, Hazırlıq: {eval.ders_hazirliq}"
+    c.events.add(e)
+    output = io.StringIO()
+    output.write(str(c))
+    output.seek(0)
+    return send_file(io.BytesIO(output.read().encode()), download_name="evaluation.ics", as_attachment=True)
+
+
+
 # MODELS
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
