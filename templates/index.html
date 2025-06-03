@@ -6,18 +6,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tələbə Qiymətləndirmə Sistemi</title>
     <style>
+        :root {
+            --primary-color: #007bff;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f8f9fa;
+            background-color: var(--light-color);
             color: #212529;
             line-height: 1.6;
         }
 
         .container {
-            max-width: 960px;
-            margin: 30px auto;
+            max-width: 1200px;
+            margin: 20px auto;
             padding: 20px;
             background-color: #fff;
             border-radius: 8px;
@@ -25,26 +35,103 @@
         }
 
         h1,
-        h2 {
-            color: #343a40;
+        h2,
+        h3 {
+            color: var(--dark-color);
             margin-bottom: 20px;
         }
 
         h1 {
             text-align: center;
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 10px;
         }
 
-        form {
-            margin-bottom: 30px;
-            padding: 20px;
+        /* Alert styles */
+        .alert {
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .alert-error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        /* Navigation tabs */
+        .nav-tabs {
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 20px;
+        }
+
+        .nav-tabs .nav-link {
+            display: inline-block;
+            padding: 10px 15px;
+            margin-bottom: -1px;
+            background: none;
+            border: 1px solid transparent;
+            text-decoration: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-tabs .nav-link:hover {
+            border-color: #e9ecef #e9ecef #dee2e6;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #495057;
+            background-color: #fff;
+            border-color: #dee2e6 #dee2e6 #fff;
+        }
+
+        /* Tab content */
+        .tab-content {
+            margin-top: 20px;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        /* Form styles */
+        .form-section {
+            background-color: #fdfdfd;
             border: 1px solid #dee2e6;
             border-radius: 5px;
-            background-color: #fdfdfd;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
         }
 
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             font-weight: 500;
             color: #495057;
         }
@@ -52,38 +139,115 @@
         input[type="text"],
         input[type="date"],
         input[type="number"],
-        select {
+        select,
+        input[type="file"] {
             width: 100%;
             padding: 10px;
-            margin-bottom: 15px;
             border: 1px solid #ced4da;
             border-radius: 4px;
             box-sizing: border-box;
             font-size: 1rem;
         }
 
-        input[type="text"]:focus,
-        input[type="date"]:focus,
-        input[type="number"]:focus,
+        input:focus,
         select:focus {
             border-color: #80bdff;
             outline: 0;
             box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, .25);
         }
 
-        input[type="submit"] {
-            background-color: #007bff;
-            color: white;
+        .btn {
             padding: 10px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 1rem;
-            transition: background-color 0.15s ease-in-out;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            transition: all 0.3s;
+            margin: 5px;
         }
 
-        input[type="submit"]:hover {
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
             background-color: #0056b3;
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        .btn-info {
+            background-color: var(--info-color);
+            color: white;
+        }
+
+        .btn-info:hover {
+            background-color: #138496;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+
+        /* Analytics cards */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .analytics-card {
+            background: linear-gradient(135deg, var(--primary-color), #0056b3);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .analytics-card h4 {
+            margin: 0 0 10px 0;
+            font-size: 1.2rem;
+        }
+
+        .analytics-card .number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .analytics-card.success {
+            background: linear-gradient(135deg, var(--success-color), #1e7e34);
+        }
+
+        .analytics-card.info {
+            background: linear-gradient(135deg, var(--info-color), #117a8b);
+        }
+
+        .analytics-card.warning {
+            background: linear-gradient(135deg, var(--warning-color), #d39e00);
+        }
+
+        /* Table styles */
+        .table-responsive {
+            overflow-x: auto;
         }
 
         table {
@@ -103,120 +267,183 @@
             background-color: #e9ecef;
             color: #495057;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         tbody tr:nth-child(odd) {
-            background-color: #f8f9fa;
+            background-color: var(--light-color);
         }
 
         tbody tr:hover {
             background-color: #e2e6ea;
         }
 
-        .error-message {
-            color: #dc3545;
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            padding: 10px;
-            border-radius: 4px;
+        /* Filter section */
+        .filter-section {
+            background-color: #f1f3f4;
+            padding: 20px;
+            border-radius: 8px;
             margin-bottom: 20px;
+        }
+
+        .filter-section h3 {
+            margin-top: 0;
+            color: var(--dark-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 15px;
+            }
+
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                flex-direction: column;
+            }
+
+            .nav-tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h1>Tələbə Qiymətləndirmə Sistemi</h1>
+        <h1>🎓 Tələbə Qiymətləndirmə Sistemi</h1>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}">
+            <strong>{{ '✅' if category == 'success' else '❌' }}</strong> {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
 
         {% if error_message %}
-        <div class="error-message">
-            <strong>Xəta:</strong> {{ error_message }}
+        <div class="alert alert-error">
+            <strong>❌ Xəta:</strong> {{ error_message }}
         </div>
         {% endif %}
 
-        <h2>Yeni Qiymətləndirmə Daxil Et</h2>
-        <form method="POST" action="{{ url_for('index') }}">
-            <div>
-                <label for="tarix">Tarix:</label>
-                <input type="date" id="tarix" name="tarix" value="{{ form_data.get('tarix', today_date) }}" required>
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <a class="nav-link active" onclick="showTab('form-tab')" id="form-link">📝 Qiymətləndirmə</a>
+            <a class="nav-link" onclick="showTab('analytics-tab')" id="analytics-link">📊 Analitika</a>
+            <a class="nav-link" onclick="showTab('data-tab')" id="data-link">🗃️ Məlumatlar</a>
+            <a class="nav-link" onclick="showTab('export-tab')" id="export-link">📤 Export/Import</a>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="tab-content">
+
+            <!-- Form Tab -->
+            <div id="form-tab" class="tab-pane active">
+                <h2>📝 Yeni Qiymətləndirmə Daxil Et</h2>
+                <div class="form-section">
+                    <form method="POST" action="{{ url_for('index') }}">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="tarix">📅 Tarix:</label>
+                                <input type="date" id="tarix" name="tarix"
+                                    value="{{ form_data.get('tarix', today_date) }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="qrup">👥 Qrup:</label>
+                                <input type="text" id="qrup" name="qrup" placeholder="Məsələn, 600a1"
+                                    value="{{ form_data.get('qrup', '') }}" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="telebe_adi">👤 Tələbə Adı Soyadı:</label>
+                                <input type="text" id="telebe_adi" name="telebe_adi" placeholder="Məsələn, Əli Vəliyev"
+                                    value="{{ form_data.get('telebe_adi', '') }}" required>
+                            </div>
+                        </div>
+
+                        <p><strong>📊 Qiymətləndirmə (1-5 arası):</strong></p>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="ders_qosulma">🎯 Dərsə Qoşulma:</label>
+                                <input type="number" id="ders_qosulma" name="ders_qosulma" min="1" max="5"
+                                    placeholder="1-5" value="{{ form_data.get('ders_qosulma', '') }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="ev_tapsirigi">📚 Ev Tapşırığı:</label>
+                                <input type="number" id="ev_tapsirigi" name="ev_tapsirigi" min="1" max="5"
+                                    placeholder="1-5" value="{{ form_data.get('ev_tapsirigi', '') }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="ders_hazirliq">📖 Dərsə Hazırlıq:</label>
+                                <input type="number" id="ders_hazirliq" name="ders_hazirliq" min="1" max="5"
+                                    placeholder="1-5" value="{{ form_data.get('ders_hazirliq', '') }}" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">➕ Əlavə Et</button>
+                    </form>
+                </div>
             </div>
 
-            <div>
-                <label for="qrup">Qrup:</label>
-                <input type="text" id="qrup" name="qrup" placeholder="Məsələn, 600a1"
-                    value="{{ form_data.get('qrup', '') }}" required>
-            </div>
+            <!-- Analytics Tab -->
+            <div id="analytics-tab" class="tab-pane">
+                {% if analytics %}
+                <h2>📊 Analitika və Statistika</h2>
 
-            <div>
-                <label for="telebe_adi">Tələbə Adı Soyadı:</label>
-                <input type="text" id="telebe_adi" name="telebe_adi" placeholder="Məsələn, Əli Vəliyev"
-                    value="{{ form_data.get('telebe_adi', '') }}" required>
-            </div>
+                <!-- Overview Cards -->
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h4>📝 Ümumi Qiymətləndirmələr</h4>
+                        <div class="number">{{ analytics.total_evaluations }}</div>
+                    </div>
+                    <div class="analytics-card success">
+                        <h4>👥 Ümumi Tələbələr</h4>
+                        <div class="number">{{ analytics.total_students }}</div>
+                    </div>
+                    <div class="analytics-card info">
+                        <h4>🏫 Ümumi Qruplar</h4>
+                        <div class="number">{{ analytics.total_groups }}</div>
+                    </div>
+                    <div class="analytics-card warning">
+                        <h4>📈 Ortalama Bal</h4>
+                        <div class="number">{{ analytics.average_scores.overall }}</div>
+                    </div>
+                </div>
 
-            <p><strong>Qiymətləndirmə (Məsələn, 1-5 arası bir rəqəm daxil edin):</strong></p>
-
-            <div>
-                <label for="ders_qosulma">Dərsə Qoşulma:</label>
-                <input type="number" id="ders_qosulma" name="ders_qosulma" min="1" max="5" placeholder="1-5"
-                    value="{{ form_data.get('ders_qosulma', '') }}" required>
-            </div>
-
-            <div>
-                <label for="ev_tapsirigi">Ev Tapşırığı:</label>
-                <input type="number" id="ev_tapsirigi" name="ev_tapsirigi" min="1" max="5" placeholder="1-5"
-                    value="{{ form_data.get('ev_tapsirigi', '') }}" required>
-            </div>
-
-            <div>
-                <label for="ders_hazirliq">Dərsə Hazırlıq:</label>
-                <input type="number" id="ders_hazirliq" name="ders_hazirliq" min="1" max="5" placeholder="1-5"
-                    value="{{ form_data.get('ders_hazirliq', '') }}" required>
-            </div>
-
-            <input type="submit" value="Əlavə Et">
-        </form>
-
-        <h2>Mövcud Qiymətləndirmələr</h2>
-        {% if evaluations %}
-        <table>
-            <thead>
-                <tr>
-                    {% for header in headers %}
-                    <th>{{ header }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in evaluations %}
-                <tr>
-                    {% for cell in row %}
-                    <td>{{ cell }}</td>
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        {% if not error_message %} {# Əgər ümumi oxuma xətası yoxdursa və cədvəl boşdursa #}
-        <p>Hələlik heç bir qiymətləndirmə daxil edilməyib.</p>
-        {% endif %}
-        {% endif %}
-    </div>
-
-    <script>
-        // Xəta baş verdikdə və form_data mövcud olduqda, form sahələrini əvvəlki dəyərlərlə doldurur.
-        // Bu, artıq HTML-də value atributları ilə təmin edildiyi üçün əlavə JavaScript-ə ehtiyac yoxdur.
-        // Əgər daha mürəkkəb bir doldurma lazım olarsa, burada JavaScript istifadə edilə bilər.
-        // Nümunə:
-        // document.addEventListener('DOMContentLoaded', function() {
-        //     {% if form_data and error_message %}
-        //         const formData = {{ form_data | tojson }};
-        //         if (formData.qrup) document.getElementById('qrup').value = formData.qrup;
-        //         if (formData.telebe_adi) document.getElementById('telebe_adi').value = formData.telebe_adi;
-        //         // ... digər sahələr ...
-        //     {% endif %}
-        // });
-    </script>
-</body>
-
-</html>
+                <!-- Average Scores -->
+                <div class="form-section">
+                    <h3>📊 Ortal
