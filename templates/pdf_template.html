@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="az">
+
+<head>
+    <meta charset="UTF-8">
+    <title>PDF Hesabat</title>
+</head>
+
+<body>
+    <h2>Tələbə Qiymətləndirmə Hesabatı</h2>
+    <table border="1">
+        <tr>
+            <th>Ad</th>
+            <th>Qrup</th>
+            <th>Tarix</th>
+            <th>Qatılım</th>
+            <th>Ev Tap.</th>
+            <th>Hazırlıq</th>
+            <th>Ortalama</th>
+        </tr>
+        {% for e in evaluations %}
+        <tr>
+            <td>{{ e.student_name }}</td>
+            <td>{{ e.group }}</td>
+            <td>{{ e.date }}</td>
+            <td>{{ e.ders_qosulma }}</td>
+            <td>{{ e.ev_tapsirigi }}</td>
+            <td>{{ e.ders_hazirliq }}</td>
+            <td>{{ e.average_score }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+
+</html>
