@@ -49,6 +49,19 @@ def download_calendar(id):
     output.seek(0)
     return send_file(io.BytesIO(output.read().encode()), download_name="evaluation.ics", as_attachment=True)
 
+@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+def edit(id):
+    eval = Evaluation.query.get_or_404(id)
+    if request.method == 'POST':
+        eval.student_name = request.form['student_name']
+        eval.group = request.form['group']
+        eval.date = request.form['date']
+        eval.ders_qosulma = int(request.form['ders_qosulma'])
+        eval.ev_tapsirigi = int(request.form['ev_tapsirigi'])
+        eval.ders_hazirliq = int(request.form['ders_hazirliq'])
+        db.session.commit()
+        return redirect(url_for('index'))
+    return render_template('edit.html', eval=eval)
 
 
 # MODELS
