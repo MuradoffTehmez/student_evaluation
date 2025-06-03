@@ -1,16 +1,126 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify
-import csv
-import os
-import pandas as pd
+# app.py
+from flask import Flask, render_template, redirect, url_for, request, flash, send_file
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-from collections import defaultdict, Counter
-import json
-from io import BytesIO
-import xlsxwriter
-from werkzeug.utils import secure_filename
+import os
+from utils.export import export_excel, export_pdf
+from utils.import_data import import_csv
+from utils.email_notify import notify_low_performance
+from utils.backup import backup_database
+from utils.qr import generate_qr
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Flash mesajları üçün
+app.secret_key = 'secure_key_here'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite3'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+
+from models import User, StudentPerformance
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+@app.route('/')
+@login_required
+def index():
+    search = request.args.get('student_name', '')
+    group = request.args.get('group', '')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    min_score = request.args.get('min_score', '')
+
+    query = StudentPerformance.query
+
+    if search:
+        query = query.filter(StudentPerformance.name.contains(search))
+    if group:
+        query = query.filter(StudentPerformance.group == group)
+    if date_from:
+        query = query.filter(StudentPerformance.date >= datetime.strptime(date_from, '%Y-%m-%d'))
+    if date_to:
+        query = query.filter(StudentPerformance.date <= datetime.strptime(date_to, '%Y-%m-%d'))
+    if min_score:
+        query = query.filter(StudentPerformance.score >= float(min_score))
+
+    students = query.order_by(StudentPerformance.date.desc()).all()
+
+    return render_template('index.html', students=students)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        user = User.query.filter_by(username=request.form['username']).first()
+        if user and check_password_hash(user.password, request.form['password']):
+            login_user(user)
+            return redirect(url_for('index'))
+        else:
+            flash("İstifadəçi adı və ya şifrə yanlışdır")
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+@app.route('/add', methods=['POST'])
+@login_required
+def add():
+    name = request.form['name']
+    group = request.form['group']
+    date = datetime.strptime(request.form['date'], '%Y-%m-%d')
+    score = float(request.form['score'])
+
+    # Dublikat yoxlaması
+    existing = StudentPerformance.query.filter_by(name=name, date=date).first()
+    if existing:
+        flash("Bu tələbə üçün həmin tarixdə qeyd mövcuddur")
+    else:
+        student = StudentPerformance(name=name, group=group, date=date, score=score)
+        db.session.add(student)
+        db.session.commit()
+    return redirect(url_for('index'))
+
+@app.route('/delete/<int:id>')
+@login_required
+def delete(id):
+    student = StudentPerformance.query.get_or_404(id)
+    db.session.delete(student)
+    db.session.commit()
+    return redirect(url_for('index'))
+
+@app.route('/export/excel')
+@login_required
+def export_excel_route():
+    return export_excel()
+
+@app.route('/export/pdf')
+@login_required
+def export_pdf_route():
+    return export_pdf()
+
+@app.route('/import/csv', methods=['POST'])
+@login_required
+def import_csv_route():
+    file = request.files['file']
+    return import_csv(file)
+
+@app.route('/analytics')
+@login_required
+def analytics():
+    return render_template('analytics.html')  # Ətraflı analiz burada göstəriləcək
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
+
+# app = Flask(__name__)
+# app.secret_key = 'your-secret-key-here'  # Flash mesajları üçün
 
 # --- Parametrlər və Qlobal Dəyişənlər ---
 DATA_FOLDER = 'data'
